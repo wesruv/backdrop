@@ -1,76 +1,173 @@
-
 .vertical-tabs {
-  margin: 1em 0 1em 15em; /* LTR */
+  margin: 1em 0 1em; /* LTR */
   border: 1px solid #ccc;
 }
-[dir="rtl"] .vertical-tabs {
-   margin-left: 0;
-   margin-right: 15em;
-}
-.vertical-tabs .vertical-tabs-list {
-  width: 15em;
+.vertical-tabs-list {
+  /* Can add font-size here to adjust vertical tab heights
+     since any sizes in JS are set in em */
   list-style: none;
-  border-top: 1px solid #ccc;
+  margin: 0;
   padding: 0;
-  margin: -1px 0 -1px -15em; /* LTR */
-  float: left; /* LTR */
+  border: 1px solid #ccc;
+  background: #fff;
+
 }
-[dir="rtl"] .vertical-tabs .vertical-tabs-list {
-  margin-left: 0;
-  margin-right: -15em;
-  float: right;
 }
-.vertical-tabs fieldset.vertical-tabs-pane {
-  margin: 0 !important;
-  padding: 0 1em;
+.vertical-tabs-list .vertical-tab-item,
+.vertical-tabs-list .vertical-tab-link {
+  font-size: 1em; /* Make sure font-size is inherited from .vertical-tabs-list */
+}
+.vertical-tabs-list .vertical-tab-link,
+.vertical-tabs-list .vertical-tabs-pane {
+  margin: 0;
+  padding: 0.5em 1em 1em;
   border: 0;
 }
-[dir="rtl"] .vertical-tabs-list {
-  float: right;
-  margin-left: 0;
-  margin-right: -15em;
+.vertical-tabs-list .vertical-tab-link {
+  border-bottom: 1px solid #e3e3e3;
 }
-fieldset.vertical-tabs-pane > legend {
+.vertical-tabs-list .vertical-tabs-pane {
+  padding-top: 0;
+  border: 0;
+}
+.vertical-tabs-list .vertical-tab-link strong {
+  display: block;
+  padding: 7px  0 0;
+  font-size: 18px;
+}
+.vertical-tabs-list .summary {
+  font-size: 14px;
+  display: block;
+  padding-top: 7px;
+  line-height: normal;
+}
+.vertical-tab-selected .summary {
   display: none;
 }
-
+.vertical-tabs-pane > legend {
+  display: none;
+}
+/* Toggle display of tab based on selected class */
+.vertical-tabs-list .vertical-tabs-pane {
+  display: none;
+}
+.vertical-tab-selected .vertical-tabs-pane {
+  display: block;
+}
+/* Set optimal spacing on first item */
+.vertical-tab-selected > .vertical-tabs-pane > .fieldset-wrapper > .form-item:first-child {
+  margin-top: 0;
+}
+.vertical-tabs-list .vertical-tab-selected .vertical-tab-link {
+  margin-bottom: 20px;
+}
+.vertical-tab-item,
+.vertical-tabs-pane {
+  outline: none;
+}
 /* Layout of each tab */
-.vertical-tabs .vertical-tabs-list li {
+.vertical-tabs-list .vertical-tab-item {
   background: #eee;
-  border: 1px solid #ccc;
-  border-top: 0;
+  border-bottom: 1px solid #ccc;
   padding: 0;
   margin: 0;
 }
 .vertical-tabs .vertical-tabs-list a {
   display: block;
   text-decoration: none;
-  padding: 0.5em 0.6em;
 }
-.vertical-tabs .vertical-tabs-list a:focus strong,
-.vertical-tabs .vertical-tabs-list a:active strong,
-.vertical-tabs .vertical-tabs-list a:hover strong {
+.vertical-tabs-list a:focus strong,
+.vertical-tabs-list a:active strong,
+.vertical-tabs-list a:hover strong {
   text-decoration: underline;
 }
 .vertical-tabs .vertical-tabs-list a:hover {
-  outline: 1px dotted;
+  outline: none;
 }
-.vertical-tabs .vertical-tabs-list .selected {
+.vertical-tabs .vertical-tabs-list .vertical-tab-selected {
   background-color: #fff;
   border-right-width: 0; /* LTR */
 }
-[dir="rtl"] .vertical-tabs .vertical-tabs-list .selected {
+[dir="rtl"] .vertical-tabs .vertical-tabs-list .vertical-tab-selected {
   border-left-width: 0;
   border-right-width: 1px;
 }
-.vertical-tabs .vertical-tabs-list .selected strong {
+.vertical-tabs .vertical-tabs-list .vertical-tab-selected strong {
   color: #000;
 }
-.vertical-tabs .vertical-tabs-list .summary {
-  display: block;
+/* Prevents field from being wider than the page
+   http://stackoverflow.com/questions/17408815 */
+.vertical-tabs-pane {
+  display: table-cell;
+  min-width: 0;
 }
-.vertical-tabs .vertical-tabs .vertical-tabs-list .summary {
-  line-height: normal;
-  margin-bottom: 0;
+.vertical-tabs-pane input {
+  max-width: 100%;
+}
+/* End input length fix */
+
+/* Two Column Desktop Styles */
+@media (min-width: 768px) {
+  .vertical-tabs-list {
+    position: relative;
+  }
+
+  .vertical-tabs-list:before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 35%;
+    height: 100%;
+    background: #eee;
+  }
+
+  .vertical-tabs-list .vertical-tab-link {
+    height: 4.75em;
+  }
+
+  .vertical-tabs-list .vertical-tab-link {
+    position: absolute;
+    left: 0;
+    width: 35%;
+    box-sizing: border-box;
+    margin: 0;
+    border-bottom-color: #aaa;
+    border-right: 1px solid #aaa;
+  }
+
+  .vertical-tab-selected .vertical-tab-link {
+    background: #fff;
+    border-right: 0;
+  }
+
+  .vertical-tabs-list .vertical-tabs-pane {
+    margin-left: 35%;
+    padding: 1.5em 2em;
+  }
+
+  .vertical-tab-selected .summary {
+    /* If the type doesn't fit in horizontally chop it off */
+    display: block;
+    width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .vertical-tabs-list .vertical-tab-item {
+    border: 0;
+  }
+
 }
 
+@media (min-width: 1000px) {
+  .vertical-tabs-list:before,
+  .vertical-tabs-list .vertical-tab-link {
+    width: 30%;
+  }
+
+  .vertical-tabs-list .vertical-tabs-pane {
+    margin-left: 30%;
+  }
+}

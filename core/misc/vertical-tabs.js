@@ -1,4 +1,3 @@
-
 (function ($) {
 
 /**
@@ -28,13 +27,17 @@ Backdrop.behaviors.verticalTabs = {
       var tab_list = $('<ul class="vertical-tabs-list"></ul>');
       $(this).wrap('<div class="vertical-tabs clearfix"></div>').before(tab_list);
 
+      var i = 0;
+
       // Transform each fieldset into a tab.
       $fieldsets.each(function () {
         var vertical_tab = new Backdrop.verticalTab({
           title: $('> legend', this).text(),
-          fieldset: $(this)
+          fieldset: $(this),
+          nthChild: i,
         });
         tab_list.append(vertical_tab.item);
+        vertical_tab.item.append($(this));
         $(this)
           .removeClass('collapsible collapsed')
           .addClass('vertical-tabs-pane')
@@ -42,7 +45,10 @@ Backdrop.behaviors.verticalTabs = {
         if (this.id == focusID) {
           tab_focus = $(this);
         }
+        i++;
       });
+
+      $(tab_list).css('min-height', (i * 4.75) + 'em');
 
       $('> li:first', tab_list).addClass('first');
       $('> li:last', tab_list).addClass('last');
@@ -104,18 +110,18 @@ Backdrop.verticalTab.prototype = {
    * Displays the tab's content pane.
    */
   focus: function () {
-    this.fieldset
-      .siblings('fieldset.vertical-tabs-pane')
+    this.item
+      .siblings('*')
         .each(function () {
-          var tab = $(this).data('verticalTab');
-          tab.fieldset.hide();
-          tab.item.removeClass('selected');
+          var tab = $(this);
+          var fieldset = $(this).children('.vertical-tabs-pane');
+          tab.removeClass('vertical-tab-selected');
         })
         .end()
       .show()
       .siblings(':hidden.vertical-tabs-active-tab')
         .val(this.fieldset.attr('id'));
-    this.item.addClass('selected');
+    this.item.addClass('vertical-tab-selected');
     // Mark the active tab for screen readers.
     $('#active-vertical-tab').remove();
     this.link.append('<span id="active-vertical-tab" class="element-invisible">' + Backdrop.t('(active tab)') + '</span>');
@@ -181,8 +187,10 @@ Backdrop.verticalTab.prototype = {
  */
 Backdrop.theme.prototype.verticalTab = function (settings) {
   var tab = {};
-  tab.item = $('<li class="vertical-tab-button" tabindex="-1"></li>')
-    .append(tab.link = $('<a href="#"></a>')
+  // Calculating height in em so CSS has a chance to update height
+  var top = settings.nthChild * 4.75;
+  tab.item = $('<li class="vertical-tab-item" tabindex="-1"></li>')
+    .append(tab.link = $('<a href="#" class="vertical-tab-link" style="top: ' + top + 'em"></a>')
       .append(tab.title = $('<strong></strong>').text(settings.title))
       .append(tab.summary = $('<span class="summary"></span>')
     )
