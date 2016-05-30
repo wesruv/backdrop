@@ -87,7 +87,7 @@ function update_get_projects() {
  *   An associative array of layout information.
  */
 function _update_build_layout_data() {
-  $layout_data = layout_get_layout_info();
+  $layout_data = layout_get_layout_template_info();
   foreach($layout_data as $layout) {
     $name = $layout['name'];
     $layouts[$name] = new stdClass();
@@ -760,7 +760,7 @@ function update_calculate_project_update_status(&$project_data, $available) {
       $latest = $available['releases'][$project_data['latest_dev']];
       if (empty($project_data['datestamp'])) {
         $project_data['status'] = UPDATE_NOT_CHECKED;
-        $project_data['reason'] = t('Unknown release date');
+        $project_data['reason'] = t('Developer version');
       }
       elseif (($project_data['datestamp'] + 100 > $latest['date'])) {
         $project_data['status'] = UPDATE_CURRENT;

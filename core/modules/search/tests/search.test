@@ -598,6 +598,24 @@ class SearchBlockTestCase extends BackdropWebTestCase {
       url('search/node/', array('absolute' => TRUE)),
       'Redirected to correct url.'
     );
+
+    // Test that after entering a too-short keyword in the form, you can then
+    // search again with a longer keyword. First test using the block form.
+    $terms = array('search_block_form' => 'a');
+    $this->backdropPost('node', $terms, t('Search'));
+    $this->assertText('You must include at least one positive keyword with 3 characters or more');
+    $terms = array('search_block_form' => 'foo');
+    $this->backdropPost(NULL, $terms, t('Search'));
+    $this->assertNoText('You must include at least one positive keyword with 3 characters or more');
+    $this->assertText('Your search yielded no results');
+
+    // Same test again, using the search page form for the second search this time.
+    $terms = array('search_block_form' => 'a');
+    $this->backdropPost('node', $terms, t('Search'));
+    $terms = array('keys' => 'foo');
+    $this->backdropPost(NULL, $terms, t('Search'));
+    $this->assertNoText('You must include at least one positive keyword with 3 characters or more');
+    $this->assertText('Your search yielded no results');
   }
 }
 
@@ -849,7 +867,7 @@ class SearchCommentTestCase extends BackdropWebTestCase {
   }
 
   /**
-   * Verify that 'add new comment' does not appear in search results or index.
+   * Verify that 'Add comment' does not appear in search results or index.
    */
   function testAddNewComment() {
     // Create a node with a short body.
@@ -863,10 +881,10 @@ class SearchCommentTestCase extends BackdropWebTestCase {
     $this->backdropLogin($user);
 
     $node = $this->backdropCreateNode($settings);
-    // Verify that if you view the node on its own page, 'add new comment'
-    // is there.
+    // Verify that if you view the node on its own page, 'Add comment' is
+    // there.
     $this->backdropGet('node/' . $node->nid);
-    $this->assertText(t('Add new comment'), 'Add new comment appears on node page');
+    $this->assertText(t('Add comment'), '"Add comment" appears on node page');
 
     // Run cron to index this page.
     $this->backdropLogout();
@@ -877,11 +895,11 @@ class SearchCommentTestCase extends BackdropWebTestCase {
     $this->backdropPost('search/node', array('keys' => 'comment'), t('Search'));
     $this->assertText(t('Your search yielded no results'), 'No results searching for the word comment');
 
-    // Search for the node title. Should be found, and 'Add new comment' should
-    // not be part of the search snippet.
+    // Search for the node title. Should be found, and 'Add comment' should not
+    // be part of the search snippet.
     $this->backdropPost('search/node', array('keys' => 'short'), t('Search'));
     $this->assertText($node->title, 'Search for keyword worked');
-    $this->assertNoText(t('Add new comment'), 'Add new comment does not appear on search results page');
+    $this->assertNoText(t('Add comment'), '"Add comment" does not appear on search results page');
   }
 
 }

@@ -438,7 +438,7 @@ function menu_set_item($path, $router_item) {
  * @param $router_item
  *   Internal use only.
  *
- * @return
+ * @return array|FALSE
  *   The router item or, if an error occurs in _menu_translate(), FALSE. A
  *   router item is an associative array corresponding to one row in the
  *   menu_router table. The value corresponding to the key 'map' holds the
@@ -504,16 +504,15 @@ function menu_get_item($path = NULL, $router_item = NULL) {
  *   left empty, the default route handler will be used. In most installations
  *   of Backdrop, the Layout module will provide the route handler, wrapping
  *   HTML pages in a layout.
+ *
+ * @return string|NULL
+ *   If $deliver is FALSE, then the string result of the current active menu
+ *   item will be returned. If $deliver is TRUE, no result will be returned;
+ *   it will be printed directly to the page.
  */
 function menu_execute_active_handler($path = NULL, $deliver = TRUE, $route_handler = NULL) {
   // Check if site is offline.
-  $site_status = _menu_site_is_offline() ? MENU_SITE_OFFLINE : MENU_SITE_ONLINE;
-
-  // Allow other modules to change the site status but not the path because that
-  // would not change the global variable. hook_url_inbound_alter() can be used
-  // to change the path. Code later will not use the $read_only_path variable.
-  $read_only_path = !empty($path) ? $path : $_GET['q'];
-  backdrop_alter('menu_site_status', $site_status, $read_only_path);
+  $site_status = _menu_site_status($path, TRUE);
 
   // If online, check access to the page and call the menu handler.
   if ($site_status == MENU_SITE_ONLINE) {
@@ -558,6 +557,7 @@ function menu_execute_active_handler($path = NULL, $deliver = TRUE, $route_handl
   if ($deliver) {
     $default_delivery_callback = (isset($router_item) && $router_item) ? $router_item['delivery_callback'] : NULL;
     backdrop_deliver_page($page_callback_result, $default_delivery_callback);
+    return NULL;
   }
   else {
     return $page_callback_result;
@@ -818,6 +818,8 @@ function _menu_translate(&$router_item, $map, $to_arg = FALSE) {
 
   // Generate the link path for the page request or local tasks.
   $link_map = explode('/', $router_item['path']);
+  $tab_root_map = array();
+  $tab_parent_map = array();
   if (isset($router_item['tab_root'])) {
     $tab_root_map = explode('/', $router_item['tab_root']);
   }
@@ -1018,12 +1020,18 @@ function _menu_link_translate(&$item, $translate = FALSE) {
  *   it's 2. Defaults to 1.
  * @param $path
  *   See menu_get_item() for more on this. Defaults to the current path.
+ *
+ * @return Entity|stdClass|array|NULL
+ *   The loaded object affiliated with the menu item position given. This can
+ *   be nearly any kind of data (even an array in some cases). If no item is
+ *   found at the given position, NULL is returned.
  */
 function menu_get_object($type = 'node', $position = 1, $path = NULL) {
   $router_item = menu_get_item($path);
   if (isset($router_item['load_functions'][$position]) && !empty($router_item['map'][$position]) && $router_item['load_functions'][$position] == $type . '_load') {
     return $router_item['map'][$position];
   }
+  return NULL;
 }
 
 /**
@@ -1139,7 +1147,12 @@ function menu_tree_output($tree) {
     $build['#sorted'] = TRUE;
     // Add the theme wrapper for outer markup.
     // Allow menu-specific theme overrides.
-    $build['#theme_wrappers'][] = 'menu_tree__' . strtr($data['link']['menu_name'], '-', '_');
+    if (isset($data['link']['menu_name'])) {
+      $build['#theme_wrappers'][] = 'menu_tree__' . strtr($data['link']['menu_name'], '-', '_');
+    }
+    else {
+      $build['#theme_wrappers'][] = 'menu_tree';
+    }
   }
 
   return $build;
@@ -1225,10 +1238,13 @@ function menu_tree_all_data($menu_name, $link = NULL, $max_depth = NULL) {
  * Setting this path does not affect the main content; for that use
  * menu_set_active_item() instead.
  *
- * @param $menu_name
+ * @param string $menu_name
  *   The name of the affected menu tree.
- * @param $path
+ * @param string $path
  *   The path to use when finding the active trail.
+ *
+ * @return string|NULL
+ *   The current menu path for the given menu, if any. NULL if not set.
  */
 function menu_tree_set_path($menu_name, $path = NULL) {
   $paths = &backdrop_static(__FUNCTION__);
@@ -1734,6 +1750,7 @@ function theme_menu_local_task($variables) {
  *     - #link: A menu link array with 'title', 'href', and 'localized_options'
  *       keys.
  *
+ * @see theme_menu_local_actions()
  * @ingroup themeable
  */
 function theme_menu_local_action($variables) {
@@ -1756,8 +1773,15 @@ function theme_menu_local_action($variables) {
 
 /**
  * Returns rendered HTML for the local actions.
+ *
+ * @param $variables
+ *   An associative array containing:
+ *     - actions: An array of action links.
+ *
+ * @see theme_menu_local_action()
+ * @ingroup themeable
  */
-function theme_menu_local_actions(&$variables) {
+function theme_menu_local_actions($variables) {
   $output = backdrop_render($variables['actions']);
   if ($output) {
     $output = '<ul class="action-links">' . $output . '</ul>';
@@ -1779,9 +1803,19 @@ function theme_menu_local_actions(&$variables) {
  */
 function menu_get_custom_theme($initialize = FALSE) {
   $custom_theme = &backdrop_static(__FUNCTION__);
-  // Skip this if the site is offline or being installed or updated, since the
-  // menu system may not be correctly initialized then.
-  if ($initialize && !_menu_site_is_offline(TRUE) && (!defined('MAINTENANCE_MODE') || (MAINTENANCE_MODE != 'update' && MAINTENANCE_MODE != 'install'))) {
+
+  // Offline mode checking does not allow for module overrides of the theme.
+  $offline_mode = (_menu_site_status() === MENU_SITE_OFFLINE || defined('MAINTENANCE_MODE'));
+  if ($offline_mode) {
+    $custom_theme = settings_get('maintenance_theme');
+    if (empty($custom_theme)) {
+      $custom_theme = config_get('system.core', 'maintenance_theme');
+    }
+    if (empty($custom_theme)) {
+      $custom_theme = config_get('system.core', 'theme_default');
+    }
+  }
+  elseif ($initialize) {
     // First allow modules to dynamically set a custom theme for the current
     // page. Since we can only have one, the last module to return a valid
     // theme takes precedence.
@@ -1819,37 +1853,6 @@ function menu_list_system_menus() {
     'management' => 'Administration menu',
     'user-menu' => 'Account menu',
   );
-}
-
-/**
- * Returns an array of links to be rendered as the Main menu.
- */
-function menu_main_menu() {
-  $config = config('menu.settings');
-  $menu_enabled = module_exists('menu');
-  // When menu module is not enabled, we need a hardcoded default value.
-  $main_links_source = $menu_enabled ? $config->get('menu_main_links') : 'main-menu';
-  return menu_navigation_links($main_links_source);
-}
-
-/**
- * Returns an array of links to be rendered as the Secondary links.
- */
-function menu_secondary_menu() {
-  $config = config('menu.settings');
-  $menu_enabled = module_exists('menu');
-  // When menu module is not enabled, we need a hardcoded default value.
-  $main_links_source = $menu_enabled ? $config->get('menu_main_links') : 'main-menu';
-  $secondary_links_source = $menu_enabled ? $config->get('menu_secondary_links') : 'user-menu';
-
-  // If the secondary menu source is set as the primary menu, we display the
-  // second level of the primary menu.
-  if ($secondary_links_source == $main_links_source) {
-    return menu_navigation_links($main_links_source, 1);
-  }
-  else {
-    return menu_navigation_links($secondary_links_source, 0);
-  }
 }
 
 /**
@@ -2069,7 +2072,6 @@ function menu_local_tasks($level = 0) {
     // Find all tabs at the same level or above the current one.
     $parent = $router_item['tab_parent'];
     $path = $router_item['path'];
-    $current = $router_item;
     $depth = 1000;
     while (isset($children[$parent])) {
       $tabs_current = array();
@@ -2309,7 +2311,7 @@ function menu_local_tabs() {
  * @ingroup themeable
  * @see menu_local_tasks()
  */
-function theme_menu_local_tasks(&$variables) {
+function theme_menu_local_tasks($variables) {
   $output = '';
 
   if (!empty($variables['primary'])) {
@@ -2847,7 +2849,7 @@ function _menu_link_build($item) {
   // the menu links generated automatically from entries in {menu_router}.
   $item['module'] = 'system';
   $item += array(
-    'menu_name' => 'main-menu',
+    'menu_name' => 'internal',
     'link_title' => $item['title'],
     'link_path' => $item['path'],
     'hidden' => 0,
@@ -3894,10 +3896,13 @@ function _menu_router_save($menu, $masks) {
  * This function will log the current user out and redirect to front page
  * if the current user has no 'access site in maintenance mode' permission.
  *
- * @param $check_only
- *   If this is set to TRUE, the function will perform the access checks and
- *   return the site offline status, but not log the user out or display any
- *   messages.
+ * @param string $path
+ *   The path at which to check site status. Some pages (such as user/login) may
+ *   be considered online while the rest of the site is offline. If empty, the
+ *   current path will be used.
+ * @param bool $display_messages
+ *   If set to TRUE, messages will be displayed indicating the site is in
+ *   offline mode.
  *
  * @return
  *   FALSE if the site is not in maintenance mode, the user login page is
@@ -3905,14 +3910,21 @@ function _menu_router_save($menu, $masks) {
  *   permission. TRUE for anonymous users not being on the login page when the
  *   site is in maintenance mode.
  */
-function _menu_site_is_offline($check_only = FALSE) {
+function _menu_site_status($path = NULL, $display_messages = FALSE) {
+  $site_status = &backdrop_static(__FUNCTION__);
+  if (isset($site_status) && !$display_messages) {
+    return $site_status === MENU_SITE_OFFLINE;
+  }
+
+  $site_status = MENU_SITE_ONLINE;
+
   // Check if site is in maintenance mode.
   if (state_get('maintenance_mode', FALSE)) {
     if (user_access('access site in maintenance mode')) {
       // Ensure that the maintenance mode message is displayed only once
       // (allowing for page redirects) and specifically suppress its display on
       // the maintenance mode settings page.
-      if (!$check_only && $_GET['q'] != 'admin/config/development/maintenance') {
+      if ($display_messages && $_GET['q'] != 'admin/config/development/maintenance') {
         if (user_access('administer site configuration')) {
           backdrop_set_message(t('Operating in maintenance mode. <a href="@url">Go online.</a>', array('@url' => url('admin/config/development/maintenance'))), 'status', FALSE);
         }
@@ -3922,10 +3934,17 @@ function _menu_site_is_offline($check_only = FALSE) {
       }
     }
     else {
-      return TRUE;
+      $site_status = MENU_SITE_OFFLINE;;
     }
   }
-  return FALSE;
+
+  // Allow other modules to change the site status but not the path because that
+  // would not change the global variable. hook_url_inbound_alter() can be used
+  // to change the path. Code later will not use the $read_only_path variable.
+  $read_only_path = !empty($path) ? $path : $_GET['q'];
+  backdrop_alter('menu_site_status', $site_status, $read_only_path);
+
+  return $site_status;
 }
 
 /**

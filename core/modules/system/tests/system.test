@@ -150,7 +150,7 @@ class EnableDisableTestCase extends ModuleTestCase {
     if (isset($modules['dblog'])) {
       $modules = array('dblog' => $modules['dblog']) + $modules;
     }
- 
+
     // Set a variable so that the hook implementations in system_test.module
     // will display messages via backdrop_set_message().
     state_set('test_verbose_module_hooks', TRUE);
@@ -719,6 +719,30 @@ class CronRunTestCase extends BackdropWebTestCase {
     $result = state_get('common_test_cron');
     $this->assertEqual($result, 'success', 'Cron correctly handles exceptions thrown during hook_cron() invocations.');
   }
+
+  /**
+   * Tests that hook_flush_caches() is not invoked on every single cron run.
+   *
+   * @see system_cron()
+   */
+  public function testCronCacheExpiration() {
+    module_enable(array('system_cron_test'));
+    state_del('system_cron_test_flush_caches');
+    cache()->flush();
+
+    // Invoke cron the first time: hook_flush_caches() should be called and then
+    // get cached.
+    backdrop_cron_run();
+    $this->assertEqual(state_get('system_cron_test_flush_caches'), 1, 'hook_flush_caches() was invoked the first time.');
+    $cache = cache_get('system_cache_tables');
+    $this->assertEqual(empty($cache), FALSE, 'Cache is filled with cache table data.');
+
+    // Run cron again and ensure that hook_flush_caches() is not called.
+    state_del('system_cron_test_flush_caches');
+    backdrop_cron_run();
+    $this->assertNull(state_get('system_cron_test_flush_caches'), 'hook_flush_caches() was not invoked the second time.');
+  }
+
 }
 
 /**
@@ -771,7 +795,7 @@ class MetaTagsTestCase extends BackdropWebTestCase {
   public function testMetaTag() {
     list($version, ) = explode('.', BACKDROP_VERSION);
     $meta_tags = array(
-      'generator' => '<meta name="Generator" content="Backdrop CMS ' . $version . ' (http://backdropcms.org)" />',
+      'generator' => '<meta name="Generator" content="Backdrop CMS ' . $version . ' (https://backdropcms.org)" />',
       'viewport' => '<meta name="viewport" content="width=device-width, initial-scale=1" />',
     );
 
@@ -796,6 +820,7 @@ class AccessDeniedTestCase extends BackdropWebTestCase {
   }
 
   function testAccessDenied() {
+    $this->backdropLogout();
     $this->backdropGet('admin');
     $this->assertText(t('Access denied'), 'Found the default 403 page');
     $this->assertResponse(403);
@@ -848,6 +873,28 @@ class AccessDeniedTestCase extends BackdropWebTestCase {
     // Check that we're still on the same page.
     $this->assertText(t('Site information'));
   }
+
+  function test403PathOnSystemForm() {
+    $this->backdropLogin($this->admin_user);
+    $edit = array(
+      'title' => $this->randomName(10),
+      'body' => array(LANGUAGE_NONE => array(array('value' => $this->randomName(100)))),
+      'path' => array(
+        'alias' => $this->randomName(8),
+      ),
+    );
+    $node = $this->backdropCreateNode($edit);
+    // Use a custom 403 page.
+    $this->backdropPost('admin/config/system/site-information', array('site_403' => $node->path['alias']), t('Save configuration'));
+    $this->backdropGet('admin/config/system/site-information');
+    $this->assertRaw($node->path['alias'], t("Found the alias for the custom 403 page path."));
+
+    // Now set a new alias on the node and make sure the new alias is on the 403 field.
+    $node->title = $this->randomName(7);
+    node_save($node);
+    $this->backdropGet('admin/config/system/site-information');
+    $this->assertRaw($node->path['alias'], t("Found the alias for the custom 403 page path after it has been changed."));
+  }
 }
 
 class PageNotFoundTestCase extends BackdropWebTestCase {
@@ -879,6 +926,28 @@ class PageNotFoundTestCase extends BackdropWebTestCase {
 
     $this->backdropGet($this->randomName(10));
     $this->assertText($node->title, 'Found the custom 404 page');
+  }
+
+  function test404PathOnSystemForm() {
+    $this->backdropLogin($this->admin_user);
+    $edit = array(
+      'title' => $this->randomName(10),
+      'body' => array(LANGUAGE_NONE => array(array('value' => $this->randomName(100)))),
+      'path' => array(
+        'alias' => $this->randomName(8),
+      ),
+    );
+    $node = $this->backdropCreateNode($edit);
+    // Use a custom 404 page.
+    $this->backdropPost('admin/config/system/site-information', array('site_404' => $node->path['alias']), t('Save configuration'));
+    $this->backdropGet('admin/config/system/site-information');
+    $this->assertRaw($node->path['alias'], t("Found the alias for the custom 404 page path."));
+
+    // Now set a new alias on the node and make sure the new alias is on the 404 field.
+    $node->title = $this->randomName(7);
+    node_save($node);
+    $this->backdropGet('admin/config/system/site-information');
+    $this->assertRaw($node->path['alias'], t("Found the alias for the custom 404 page path after it has been changed."));
   }
 }
 
@@ -2612,7 +2681,7 @@ class MenuBlockTestCase extends BackdropWebTestCase {
     $this->backdropGet('node/' . $node1->nid);
 
     // Verify level 2 links are shown, but not level 1.
-    // We use item 6 here since item 1, although not in the menu, is in the 
+    // We use item 6 here since item 1, although not in the menu, is in the
     // breadcrumb.
     $this->assertNoLink($item6['link_title']);
     $this->assertLink($item2['link_title']);

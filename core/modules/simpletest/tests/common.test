@@ -188,7 +188,7 @@ class CommonURLUnitTestCase extends BackdropWebTestCase {
     $this->assertEqual(backdrop_parse_url($url), $result, 'Absolute URL parsed correctly.');
 
     // External URL testing.
-    $url = 'http://backdropcms.org/foo/bar?foo=bar&bar=baz&baz#foo';
+    $url = 'https://backdropcms.org/foo/bar?foo=bar&bar=baz&baz#foo';
 
     // Test that Backdrop can recognize an absolute URL. Used to prevent attack
     // vectors.
@@ -203,9 +203,9 @@ class CommonURLUnitTestCase extends BackdropWebTestCase {
     $this->assertFalse(url_is_external($url), 'Correctly identified an internal URL with a leading slash.');
 
     // Test the parsing of absolute URLs.
-    $url = 'http://backdropcms.org/foo/bar?foo=bar&bar=baz&baz#foo';
+    $url = 'https://backdropcms.org/foo/bar?foo=bar&bar=baz&baz#foo';
     $result = array(
-      'path' => 'http://backdropcms.org/foo/bar',
+      'path' => 'https://backdropcms.org/foo/bar',
       'query' => array('foo' => 'bar', 'bar' => 'baz', 'baz' => ''),
       'fragment' => 'foo',
     );
@@ -316,7 +316,7 @@ class CommonURLUnitTestCase extends BackdropWebTestCase {
    * Test external URL handling.
    */
   function testExternalUrls() {
-    $test_url = 'http://backdropcms.org/';
+    $test_url = 'https://backdropcms.org/';
 
     // Verify external URL can contain a fragment.
     $url = $test_url . '#backdrop';
@@ -356,6 +356,56 @@ class CommonURLUnitTestCase extends BackdropWebTestCase {
     $url = '//backdropcms.org';
     $result = url($url);
     $this->assertEqual($url, $result, 'External URL without protocol is not altered.');
+  }
+}
+
+/**
+ * Tests url_is_external().
+ */
+class UrlIsExternalUnitTest extends BackdropUnitTestCase {
+  /**
+   * Tests if each URL is external or not.
+   */
+  function testUrlIsExternal() {
+    foreach ($this->examples() as $path => $expected) {
+      $this->assertIdentical(url_is_external($path), $expected, $path);
+    }
+  }
+
+  /**
+   * Provides data for testUrlIsExternal().
+   *
+   * @return array
+   *   An array of test data, keyed by a path, with the expected value where
+   *   TRUE is external, and FALSE is not external.
+   */
+  protected function examples() {
+    return array(
+      // Simple external URLs.
+      'http://example.com' => TRUE,
+      'https://example.com' => TRUE,
+      'http://example.org/foo/bar?foo=bar&bar=baz&baz#foo' => TRUE,
+      '//example.org' => TRUE,
+      // Some browsers ignore or strip leading control characters.
+      "\x00//www.example.com" => TRUE,
+      "\x08//www.example.com" => TRUE,
+      "\x1F//www.example.com" => TRUE,
+      "\n//www.example.com" => TRUE,
+      // JSON supports decoding directly from UTF-8 code points.
+      json_decode('"\u00AD"') . "//www.example.com" => TRUE,
+      json_decode('"\u200E"') . "//www.example.com" => TRUE,
+      json_decode('"\uE0020"') . "//www.example.com" => TRUE,
+      json_decode('"\uE000"')  . "//www.example.com" => TRUE,
+      // Backslashes should be normalized to forward.
+      '\\\\example.com' => TRUE,
+      // Local URLs.
+      'node' => FALSE,
+      '/system/ajax' => FALSE,
+      '?q=foo:bar' => FALSE,
+      'node/edit:me' => FALSE,
+      '/example.org' => FALSE,
+      '<front>' => FALSE,
+    );
   }
 }
 
@@ -1091,6 +1141,16 @@ class CommonBackdropGotoTestCase extends BackdropWebTestCase {
     $this->assertEqual($status, 302, 'Expected response code was sent.');
     $this->assertText('backdrop_goto', 'Backdrop goto redirect succeeded.');
     $this->assertEqual($this->getUrl(), url('common-test/backdrop_goto', array('absolute' => TRUE)), 'Backdrop goto redirected to expected URL.');
+
+    // Test that calling backdrop_goto() on the current path is not dangerous.
+    state_set('common_test_redirect_current_path', TRUE);
+    $this->backdropGet('', array('query' => array('q' => 'http://www.example.com/')));
+    $headers = $this->backdropGetHeaders(TRUE);
+    list(, $status) = explode(' ', $headers[0][':status'], 3);
+    $this->assertEqual($status, 302, 'Expected response code was sent.');
+    $this->assertNotEqual($this->getUrl(), 'http://www.example.com/', 'Backdrop goto did not redirect to external URL.');
+    $this->assertTrue(strpos($this->getUrl(), url('<front>', array('absolute' => TRUE))) === 0, 'Backdrop redirected to itself.');
+    state_del('common_test_redirect_current_path');
 
     $this->backdropGet('common-test/backdrop_goto/redirect_advanced');
     $headers = $this->backdropGetHeaders(TRUE);

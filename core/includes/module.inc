@@ -323,15 +323,26 @@ function module_load_install($module) {
  *   The name of the included file, if successful; FALSE otherwise.
  */
 function module_load_include($type, $module, $name = NULL) {
+  static $files = array();
+
   if (!isset($name)) {
     $name = $module;
+  }
+
+  $key = $type . ':' . $module . ':' . $name;
+  if (isset($files[$key])) {
+    return $files[$key];
   }
 
   if (function_exists('backdrop_get_path')) {
     $file = BACKDROP_ROOT . '/' . backdrop_get_path('module', $module) . "/$name.$type";
     if (is_file($file)) {
       require_once $file;
+      $files[$key] = $file;
       return $file;
+    }
+    else {
+      $files[$key] = FALSE;
     }
   }
   return FALSE;
@@ -368,20 +379,22 @@ function module_load_all_includes($type, $name = NULL) {
  * - Invoke hook_modules_installed().
  * - Invoke hook_modules_enabled().
  *
- * @param $module_list
+ * @param string[] $module_list
  *   An array of module names.
- * @param $enable_dependencies
+ * @param bool $enable_dependencies
  *   If TRUE, dependencies will automatically be added and enabled in the
  *   correct order. This incurs a significant performance cost, so use FALSE
  *   if you know $module_list is already complete and in the correct order.
  *
- * @return
+ * @return bool
  *   FALSE if one or more dependencies are missing, TRUE otherwise.
  *
  * @see hook_install()
  * @see hook_enable()
  * @see hook_modules_installed()
  * @see hook_modules_enabled()
+ * @see module_disable()
+ * @see backdrop_uninstall_modules()
  */
 function module_enable($module_list, $enable_dependencies = TRUE) {
   if ($enable_dependencies) {
@@ -515,12 +528,15 @@ function module_enable($module_list, $enable_dependencies = TRUE) {
 /**
  * Disables a given set of modules.
  *
- * @param $module_list
+ * @param array $module_list
  *   An array of module names.
- * @param $disable_dependents
+ * @param bool $disable_dependents
  *   If TRUE, dependent modules will automatically be added and disabled in the
  *   correct order. This incurs a significant performance cost, so use FALSE
  *   if you know $module_list is already complete and in the correct order.
+ *
+ * @see backdrop_uninstall_modules()
+ * @see module_enable()
  */
 function module_disable($module_list, $disable_dependents = TRUE) {
   if ($disable_dependents) {
@@ -884,8 +900,9 @@ function module_implements_write_cache() {
  * @param ...
  *   Arguments to pass to the hook implementation.
  *
- * @return
- *   The return value of the hook implementation.
+ * @return mixed|NULL
+ *   The return value of the hook implementation. NULL if the module does not
+ *   implement the given hook.
  *
  * @see backdrop_alter()
  */
@@ -896,6 +913,8 @@ function module_invoke($module, $hook) {
   if (module_hook($module, $hook)) {
     return call_user_func_array($module . '_' . $hook, $args);
   }
+
+  return NULL;
 }
 
 /**
@@ -942,12 +961,20 @@ function module_invoke_all($hook) {
 
 /**
  * Returns an array of modules that have been merged into Backdrop core.
+ *
+ * Modules that have been merged into core may not be enabled on newer
+ * installations of Backdrop. Note that some modules have been merged into core
+ * but kept the same name as they did previously. For example "redirect" module
+ * existed both as a contrib module and then later as a core module. Because
+ * the core module shares the same name, it's not included in this list.
+ * Including it would prevent the core module from being enabled.
  */
 function backdrop_merged_modules() {
   return array(
     'token', // Backdrop 1.1.0.
     'pathauto', // Backdrop 1.1.0.
     'transliteration', // Backdrop 1.3.0.
+    'project_browser', // Backdrop 1.4.0.
   );
 }
 
