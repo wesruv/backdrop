@@ -819,3 +819,16 @@ function menu_preprocess_block(&$variables) {
     $variables['attributes']['role'] = 'navigation';
   }
 }
+
+/**
+ * Implements hook_menu_block_style_info().
+ */
+function menu_menu_block_style_info() {
+  $info['responsive_menu'] = array(
+    'name' => 'responsive_menu',
+    'title' => t('Responsive Menu'),
+    'description' => t('Responsive menus written for Backdrop'),
+    'class' => 'responsive-menu',
+  );
+  return $info;
+}
