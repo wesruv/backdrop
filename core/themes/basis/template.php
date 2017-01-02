@@ -90,3 +90,7 @@ function basis_breadcrumb($variables) {
   }
   return $output;
 }
+
+function basis_preprocess_comment(&$variables) {
+  dpm($variables);
+}
