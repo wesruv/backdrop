@@ -252,4 +252,35 @@ Backdrop.behaviors.color = {
   }
 };
 
+if (typeof Backdrop.featureDetect !== 'object') {
+  Backdrop.featureDetect = {};
+}
+
+/**
+ * Test to see if browser has ability to use input with a type of color
+ */
+Backdrop.featureDetect.inputTypeColor = function() {
+  var $body = $('body'),
+      $inputTypeColor = $('<div style="width: 0; height: 0; overflow: hidden;"><input type="color" id="featureDetectInputTypeColor" name="featureDetectInputTypeColor"/></div>');
+
+  if ($body.hasClass('has-input-type-color')) {
+    return true;
+  } else if ($body.hasClass('no-input-type-color')) {
+    return false;
+  } else {
+    // Run our test by adding a color field into the DOM and checking it's type
+    $body.append($inputTypeColor);
+    // By default browsers that don't understand color fields will fall back to text
+    if (document.getElementById('featureDetectInputTypeColor').type == 'text') {
+      $body.addClass('no-input-type-color');
+      $body.remove($inputTypeColor);
+      return false;
+    } else {
+      $body.addClass('has-input-type-color');
+      $body.remove($inputTypeColor);
+      return true;
+    }
+  }
+}
+
 })(jQuery);
