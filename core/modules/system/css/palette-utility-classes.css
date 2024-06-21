@@ -1,0 +1,50 @@
+.palette--default {
+  --surface__backgroundColor: var(--default__surface__backgroundColor);
+  --surface--inactive__backgroundColor: var(--default__surface--inactive__backgroundColor);
+
+  --surface__borderColor: var(--default__surface__borderColor);
+  --surface__borderColor--subtle: var(--default__surface__borderColor--subtle);
+
+  --button--primary__font__color: var(--default__button--primary__font__color);
+  --button--primary__backgroundColor: var(--default__button--primary__backgroundColor);
+  --button--primary__borderColor: var(--default__button--primary__borderColor);
+  --button--secondary__borderColor: var(--default__button--secondary__borderColor);
+
+  --font__color: var(--default__font__color);
+  --font--inactive__color: var(--default__font--inactive__color);
+  --font--link__color: var(--default__font--link__color);
+}
+
+.palette--offset {
+  --surface__backgroundColor: var(--offset__surface__backgroundColor);
+  --surface--inactive__backgroundColor: var(--offset__surface--inactive__backgroundColor);
+
+  --surface__borderColor: var(--offset__surface__borderColor);
+  --surface__borderColor--subtle: var(--offset__surface__borderColor--subtle);
+
+  --button--primary__font__color: var(--offset__button--primary__font__color);
+  --button--primary__backgroundColor: var(--offset__button--primary__backgroundColor);
+  --button--primary__borderColor: var(--offset__button--primary__borderColor);
+  --button--secondary__borderColor: var(--offset__button--secondary__borderColor);
+
+  --font__color: var(--offset__font__color);
+  --font--inactive__color: var(--offset__font--inactive__color);
+  --font--link__color: var(--offset__font--link__color);
+}
+
+.palette--inverse {
+  --surface__backgroundColor: var(--inverse__surface__backgroundColor);
+  --surface--inactive__backgroundColor: var(--inverse__surface--inactive__backgroundColor);
+
+  --surface__borderColor: var(--inverse__surface__borderColor);
+  --surface__borderColor--subtle: var(--inverse__surface__borderColor--subtle);
+
+  --button--primary__font__color: var(--inverse__button--primary__font__color);
+  --button--primary__backgroundColor: var(--inverse__button--primary__backgroundColor);
+  --button--primary__borderColor: var(--inverse__button--primary__borderColor);
+  --button--secondary__borderColor: var(--inverse__button--secondary__borderColor);
+
+  --font__color: var(--inverse__font__color);
+  --font--inactive__color: var(--inverse__font--inactive__color);
+  --font--link__color: var(--inverse__font--link__color);
+}

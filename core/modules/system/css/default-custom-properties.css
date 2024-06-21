@@ -1,0 +1,80 @@
+/**
+ * Sauces:
+ * https://developer.mozilla.org/en-US/docs/Web/CSS/color_value/light-dark
+ * https://urchymanny.medium.com/light-theme-dark-theme-best-approach-for-designers-developers-68c84dbe7f4c
+ */
+
+/* Color Palette */
+:root {
+  /* Grayscale */
+  --shade--100: #fff;
+  --shade--95:  #f0f0f0;
+  --shade--90:  #dbdbd9;
+  --shade--85:  #d0d0d0;
+  --shade--80:  #ccc;
+  --shade--70: #97979e;
+  --shade--60:  #606060;
+  --shade--50:  #444b53;
+  --shade--15:  #3f3f3f;
+  --shade--10:  #323239;
+  --shade--5:   #0f0f0f;
+  --shade--0:   #000;
+
+  --accent--50: #0074bd;
+  /* Passes AA color contrast with white text */
+  --accent--45: #1766ae;
+}
+
+/* Default color scheme vars */
+:root {
+  --default__surface__backgroundColor: var(--shade--100);
+  --default__surface--inactive__backgroundColor: var(--shade--90);
+
+  --default__surface__borderColor: var(--shade--85);
+  --default__surface__borderColor--subtle: var(--shade--80);
+
+  --default__button--primary__font__color: var(--shade--100);
+  --default__button--primary__backgroundColor: var(--accent--45);
+  --default__button--primary__borderColor: var(--accent--45);
+  --default__button--secondary__borderColor: var(--shade--70);
+
+  --default__font__color: var(--shade--0);
+  --default__font--inactive__color: var(--shade--60);
+  --default__font--link__color: var(--accent--50);
+}
+
+/* Secondary color scheme vars */
+:root {
+  --offset__surface__backgroundColor: var(--shade--95);
+  --offset__surface--inactive__backgroundColor: var(--default__surface--inactive__backgroundColor);
+
+  --offset__surface__borderColor: var(--default__surface__borderColor);
+  --offset__surface__borderColor--subtle: var(--default__surface__borderColor--subtle);
+
+  --offset__button--primary__font__color: var(--default__button--primary__font__color);
+  --offset__button--primary__backgroundColor: var(--default__button--primary__backgroundColor);
+  --offset__button--primary__borderColor: var(--default__button--primary__borderColor);
+  --offset__button--secondary__borderColor: var(--default__button--secondary__borderColor);
+
+  --offset__font__color: var(--default__font__color);
+  --offset__font--inactive__color: var(--default__font--inactive__color);
+  --offset__font--link__color: var(--default__font--link__color);
+}
+
+/* Default color scheme vars */
+:root {
+  --inverse__surface__backgroundColor: var(--shade--0);
+  --inverse__surface--inactive__backgroundColor: var(--shade--10);
+
+  --inverse__surface__borderColor: var(--shade--15);
+  --inverse__surface__borderColor--subtle: #ccc;
+
+  --inverse__button--primary__font__color: var(--shade--100);
+  --inverse__button--primary__backgroundColor: var(--accent--45);
+  --inverse__button--primary__borderColor: var(--accent--45);
+  --inverse__button--secondary__borderColor: #97979e;
+
+  --inverse__font__color: var(--shade--0);
+  --inverse__font--inactive__color: var(--shade--60);
+  --inverse__font--link__color: var(--accent--50);
+}
